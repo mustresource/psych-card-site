@@ -38,18 +38,36 @@ let data=[]
 
 async function loadSheet(){
 
-const url=document.getElementById("sheetUrl").value
+try{
 
-// ✅ 用代理避免 CORS
+const url=document.getElementById("sheetUrl").value.trim()
+
+if(!url){
+alert("請貼上CSV網址")
+return
+}
+
+// ✅ 穩定代理（避免CORS）
 const proxy="https://api.allorigins.win/raw?url="+encodeURIComponent(url)
 
 const res=await fetch(proxy)
+
+if(!res.ok){
+throw new Error("fetch失敗")
+}
+
 const text=await res.text()
 
 parseCSV(text.replace(/\r/g,""))
 
+}catch(e){
+alert("讀取失敗，請確認CSV有發布")
+console.error(e)
 }
 
+}
+
+// ✅ 強化CSV解析（支援中文/逗號）
 function parseCSV(text){
 
 const rows=[]
@@ -58,15 +76,18 @@ let row=[],cell="",inside=false
 for(let i=0;i<text.length;i++){
 let c=text[i]
 
-if(c=='"') inside=!inside
+if(c=='"'){inside=!inside}
 else if(c=="," && !inside){row.push(cell);cell=""}
 else if(c=="\n" && !inside){row.push(cell);rows.push(row);row=[];cell=""}
-else cell+=c
+else{cell+=c}
 }
+
+if(cell) row.push(cell)
+if(row.length) rows.push(row)
 
 rows.shift()
 
-data=rows.map(r=>({
+data=rows.filter(r=>r[0]).map(r=>({
 name:r[0],
 image:r[1],
 category:r[2],
@@ -90,7 +111,7 @@ const div=document.createElement("div")
 div.className="card"
 
 div.innerHTML=`
-<img src="${c.image}" onerror="this.src='https://via.placeholder.com/300x200'">
+<img src="${c.image}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
 <div class="card-body">
 <div class="name">${c.name}</div>
 <div class="count">套數：${c.count}</div>
