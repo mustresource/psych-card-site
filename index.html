@@ -1,130 +1,279 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>心理牌卡資料庫</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>心理牌卡資料庫 - 專業版</title>
 
-<style>
-body{margin:0;font-family:Arial;background:#f5f5f5}
-.header{background:#222;color:#fff;padding:15px;font-size:20px}
-.toolbar{background:#fff;padding:10px}
-input,button{padding:8px;margin:5px}
-#cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;padding:20px}
-.card{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.15)}
-.card img{width:100%;height:200px;object-fit:cover}
-.card-body{padding:10px}
-.name{font-weight:bold}
-.count{color:#d32f2f;font-weight:bold}
-</style>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --accent-color: #d32f2f;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --text-muted: #666;
+        }
 
+        body {
+            margin: 0;
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        /* 標題欄美化 */
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #4a90e2);
+            color: #fff;
+            padding: 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 { margin: 0; font-size: 1.8rem; letter-spacing: 2px; }
+
+        /* 工具列：搜尋與篩選 */
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .search-box, .filter-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-box:focus, .filter-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+        }
+
+        .search-box { width: 100%; max-width: 300px; }
+
+        /* 卡片容器 */
+        #cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 卡片單體美化 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: #eee;
+        }
+
+        .card-body {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .tag-group { margin-bottom: 12px; }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            background: #eef2f7;
+            color: var(--primary-color);
+        }
+
+        .count {
+            color: var(--accent-color);
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-top: auto;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        .desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin: 10px 0;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* 載入中動畫 */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="header">心理牌卡資料庫</div>
+<div class="header">
+    <h1>心理牌卡資料庫</h1>
+</div>
 
 <div class="toolbar">
-<input id="sheetUrl" placeholder="貼上 Google Sheet CSV">
-<button onclick="loadSheet()">載入</button>
+    <input type="text" id="searchInput" class="search-box" placeholder="搜尋牌卡名稱或描述..." oninput="filterData()">
+    <select id="categoryFilter" class="filter-select" onchange="filterData()">
+        <option value="">所有分類</option>
+    </select>
 </div>
 
-<div id="cards"></div>
+<div id="cards">
+    <div class="loading">資料讀取中，請稍候...</div>
+</div>
 
 <script>
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR-bt89hSX1YOKzg-V-eBayoXvqLUAfOQ_ccfs3S9v_2D3h3uhvKey_4qv5eK4M-alKi_pllvPEDOmn/pub?output=csv";
+    const PROXY = "https://corsproxy.io/?";
+    
+    let allData = [];
 
-let data=[]
+    // 頁面載入後自動執行
+    window.onload = loadSheet;
 
-async function loadSheet(){
+    async function loadSheet() {
+        try {
+            const res = await fetch(PROXY + encodeURIComponent(SHEET_URL));
+            if (!res.ok) throw new Error("讀取失敗");
+            
+            const text = await res.text();
+            parseCSV(text.replace(/\r/g, ""));
+            setupFilters();
+            render(allData);
+        } catch (e) {
+            document.getElementById("cards").innerHTML = `<div class="loading">❌ 無法載入資料，請確認 Google 試算表已發布為 CSV。</div>`;
+            console.error(e);
+        }
+    }
 
-try{
+    function parseCSV(text) {
+        const rows = [];
+        let row = [], cell = "", inside = false;
 
-const url=document.getElementById("sheetUrl").value.trim()
+        for (let i = 0; i < text.length; i++) {
+            let c = text[i];
+            if (c == '"') { inside = !inside; }
+            else if (c == "," && !inside) { row.push(cell); cell = ""; }
+            else if (c == "\n" && !inside) { row.push(cell); rows.push(row); row = []; cell = ""; }
+            else { cell += c; }
+        }
+        if (cell) row.push(cell);
+        if (row.length) rows.push(row);
 
-if(!url){
-alert("請貼上CSV網址")
-return
-}
+        rows.shift(); // 移除標題列
 
-// ✅ 穩定代理（避免CORS）
-const proxy = "https://corsproxy.io/?" + encodeURIComponent(url)
+        allData = rows.filter(r => r[0]).map(r => ({
+            name: r[0] || "未命名",
+            image: r[1] || "",
+            category: r[2] || "未分類",
+            use: r[3] || "一般",
+            count: r[4] || "0",
+            desc: r[5] || ""
+        }));
+    }
 
-const res=await fetch(proxy)
+    function setupFilters() {
+        const categories = [...new Set(allData.map(item => item.category))];
+        const select = document.getElementById("categoryFilter");
+        categories.forEach(cat => {
+            if(cat) {
+                const opt = document.createElement("option");
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            }
+        });
+    }
 
-if(!res.ok){
-throw new Error("fetch失敗")
-}
+    function filterData() {
+        const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+        const selectedCat = document.getElementById("categoryFilter").value;
 
-const text=await res.text()
+        const filtered = allData.filter(item => {
+            const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
+                                 item.desc.toLowerCase().includes(searchTerm);
+            const matchesCat = selectedCat === "" || item.category === selectedCat;
+            return matchesSearch && matchesCat;
+        });
 
-parseCSV(text.replace(/\r/g,""))
+        render(filtered);
+    }
 
-}catch(e){
-alert("讀取失敗，請確認CSV有發布")
-console.error(e)
-}
+    function render(displayData) {
+        const box = document.getElementById("cards");
+        box.innerHTML = "";
 
-}
+        if (displayData.length === 0) {
+            box.innerHTML = '<div class="loading">找不到相關牌卡</div>';
+            return;
+        }
 
-// ✅ 強化CSV解析（支援中文/逗號）
-function parseCSV(text){
-
-const rows=[]
-let row=[],cell="",inside=false
-
-for(let i=0;i<text.length;i++){
-let c=text[i]
-
-if(c=='"'){inside=!inside}
-else if(c=="," && !inside){row.push(cell);cell=""}
-else if(c=="\n" && !inside){row.push(cell);rows.push(row);row=[];cell=""}
-else{cell+=c}
-}
-
-if(cell) row.push(cell)
-if(row.length) rows.push(row)
-
-rows.shift()
-
-data=rows.filter(r=>r[0]).map(r=>({
-name:r[0],
-image:r[1],
-category:r[2],
-use:r[3],
-count:r[4],
-desc:r[5]
-}))
-
-render()
-
-}
-
-function render(){
-
-const box=document.getElementById("cards")
-box.innerHTML=""
-
-data.forEach(c=>{
-
-const div=document.createElement("div")
-div.className="card"
-
-div.innerHTML=`
-<img src="${c.image}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
-<div class="card-body">
-<div class="name">${c.name}</div>
-<div class="count">套數：${c.count}</div>
-<div>${c.category} / ${c.use}</div>
-</div>
-`
-
-box.appendChild(div)
-
-})
-
-}
-
+        displayData.forEach(c => {
+            const div = document.createElement("div");
+            div.className = "card";
+            div.innerHTML = `
+                <img src="${c.image}" onerror="this.src='https://via.placeholder.com/400x250?text=無圖片檔案'">
+                <div class="card-body">
+                    <div class="name">${c.name}</div>
+                    <div class="tag-group">
+                        <span class="tag">${c.category}</span>
+                        <span class="tag">${c.use}</span>
+                    </div>
+                    <div class="desc">${c.desc}</div>
+                    <div class="count">庫存套數：${c.count}</div>
+                </div>
+            `;
+            box.appendChild(div);
+        });
+    }
 </script>
 
 </body>
